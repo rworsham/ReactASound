@@ -1,5 +1,5 @@
-from db import Session
-from models import EmojiSoundMap
+from database_util.db import Session
+from database_util.models import EmojiSoundMap
 from sqlalchemy import select
 
 async def add_or_update_mapping(guild_id, emoji, filename, uploader_id):

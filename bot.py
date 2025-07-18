@@ -3,14 +3,19 @@ import os
 import logging
 from dotenv import load_dotenv
 
-from forms.add_sound_form import AddSoundModal
-from forms.remove_sound_form import RemoveSoundModal
+from interactions.add_sound import AddSoundFlow
+from interactions.remove_sound import RemoveSoundModal
 from logs.log_config import setup_logging
 
 setup_logging()
 load_dotenv()
 
-bot = discord.Bot()
+intents = discord.Intents.default()
+intents.guilds = True
+intents.members = True
+intents.message_content = True
+
+bot = discord.Bot(intents=intents)
 
 @bot.event
 async def on_ready():
@@ -29,8 +34,8 @@ async def on_guild_join(guild):
 
         setup_msg = (
             "👋 Welcome to **ReactASound**!\n\n"
-            "🔧 Use `/addsound to create your mappings.\n"
-            "🔧 Use `/removesound to create your mappings.\n"
+            "🔧 Use `/addsound` to create your mappings.\n"
+            "🔧 Use `/removesound` to create your mappings.\n"
             "📜 Use `/list` to see all bindings.\n"
             "▶️ Use a reaction on any message in this channel to play the corresponding sound."
         )
@@ -41,14 +46,23 @@ async def on_guild_join(guild):
     except Exception as e:
         logging.error(f"Error creating channel or sending setup prompt in {guild.name}: {e}")
 
-@bot.slash_command(description="Bind an emoji to a sound file via modal")
+@bot.slash_command(description="Bind an emoji to a sound file by uploading a file in a message")
 async def addsound(ctx: discord.ApplicationContext):
-    modal = AddSoundModal(guild_id=ctx.guild.id, user_id=ctx.author.id)
-    await ctx.send_modal(modal)
+    handler = AddSoundFlow(bot, ctx)
+    await handler.start()
 
 @bot.slash_command(description="Remove an emoji-to-sound binding via modal")
 async def removesound(ctx: discord.ApplicationContext):
     modal = RemoveSoundModal(guild_id=ctx.guild.id, user_id=ctx.author.id)
     await ctx.send_modal(modal)
 
-bot.run(os.getenv('TOKEN'))
+@bot.event
+async def on_error(event, *args, **kwargs):
+    logging.exception(f"Unhandled error in event: {event}")
+
+
+if __name__ == "__main__":
+    try:
+        bot.run(os.getenv("TOKEN"))
+    except Exception as e:
+        logging.exception("Bot crashed with exception:")
