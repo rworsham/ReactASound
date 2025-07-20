@@ -3,7 +3,9 @@ import logging
 import os
 import asyncio
 import re
+
 from database_util.db_util import add_or_update_mapping
+from interactions.reaction_board import ReactionBoard
 
 EMOJI_REGEX = re.compile(
     r'(<a?:\w+:\d+>)|([\U0001F300-\U0001FAFF\u2600-\u26FF\u2700-\u27BF])'
@@ -61,6 +63,9 @@ class AddSoundFlow:
                 f"✅ Successfully bound {emoji} to `{attachment.filename}`!",
                 mention_author=False
             )
+
+            reaction_board = ReactionBoard(self.bot)
+            await reaction_board.update_reactions(self.ctx.guild)
 
         except asyncio.TimeoutError:
             await self.ctx.followup.send(
