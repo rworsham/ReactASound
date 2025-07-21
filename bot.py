@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 from interactions.add_sound import AddSoundFlow
 from interactions.remove_sound import RemoveSoundModal
+from interactions.on_reaction import handle_reaction
 from logs.log_config import setup_logging
 
 setup_logging()
@@ -55,6 +56,10 @@ async def addsound(ctx: discord.ApplicationContext):
 async def removesound(ctx: discord.ApplicationContext):
     modal = RemoveSoundModal(guild_id=ctx.guild.id, user_id=ctx.author.id)
     await ctx.send_modal(modal)
+
+@bot.event
+async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
+    await handle_reaction(bot, payload)
 
 @bot.event
 async def on_error(event, *args, **kwargs):
