@@ -36,7 +36,7 @@ class AddSoundFlow:
             return True
 
         try:
-            message = await self.bot.wait_for("message", check=check, timeout=300)  # 5 minutes timeout
+            message = await self.bot.wait_for("message", check=check, timeout=300)
 
             emoji = self.extract_emoji(message.content)
             if not emoji:
