@@ -18,7 +18,7 @@ class ReactionBoard:
                 msg = await channel.fetch_message(pinned_msg_id)
                 return msg
             except discord.NotFound:
-                logging.warning(f"Pinned message ID {pinned_msg_id} from DB not found in channel. Will recreate.")
+                logging.warning(f"Pinned message ID {pinned_msg_id} from DB not found. Recreating.")
 
         pins = await channel.pins()
         for pin in pins:
@@ -26,7 +26,18 @@ class ReactionBoard:
                 await upsert_pinned_message_id(guild.id, pin.id)
                 return pin
 
-        message = await channel.send("🎵 React with an emoji below to play your sound!")
+        file = discord.File("assets/reaction_board.jpg", filename="reaction_board.jpg")
+
+        embed = discord.Embed(
+            title="🎵 ReactASound Soundboard",
+            description="React with one of the emojis you have setup below to play a sound!\n\n"
+                        "Use `/addsound` or `/removesound` in a botcommands thread to manage bindings.",
+            color=discord.Color.blurple()
+        )
+        embed.set_image(url="attachment://reaction_board.jpg")
+        embed.set_footer(text="Only works if you're in a voice channel!")
+
+        message = await channel.send(embed=embed, file=file)
         await message.pin()
         await upsert_pinned_message_id(guild.id, message.id)
         logging.info(f"Created and pinned new soundboard message in {guild.name}")
@@ -34,13 +45,21 @@ class ReactionBoard:
 
     async def update_reactions(self, guild: discord.Guild):
         message = await self.get_or_create_pinned_message(guild)
-        existing_reactions = [str(reaction.emoji) for reaction in message.reactions]
+
+        try:
+            await message.clear_reactions()
+        except discord.Forbidden:
+            logging.warning(f"Missing permissions to clear reactions in guild {guild.name}")
+        except Exception as e:
+            logging.warning(f"Could not clear reactions in {guild.name}: {e}")
 
         emoji_list = await get_all_emojis_for_guild(guild.id)
+        if not emoji_list:
+            logging.info(f"No emoji mappings found for guild {guild.name}")
+            return
 
         for emoji in emoji_list:
-            if emoji not in existing_reactions:
-                try:
-                    await message.add_reaction(emoji)
-                except discord.HTTPException:
-                    logging.warning(f"Failed to add reaction: {emoji} (possibly invalid?)")
+            try:
+                await message.add_reaction(emoji)
+            except discord.HTTPException as e:
+                logging.warning(f"Failed to add reaction: {emoji} in {guild.name} — {e}")
